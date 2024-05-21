@@ -22,6 +22,7 @@ piperInitializingSubject
   })
 
 
+var selectedSpeed = 1; // Default speed
 
 $(function() {
   if (queryString.isPopup) $("body").addClass("is-popup")
@@ -33,6 +34,7 @@ $(function() {
   $("#btnSettings").click(onSettings);
   $("#btnForward").click(onForward);
   $("#btnRewind").click(onRewind);
+  $("#btnSaveToNotion").click(onSaveToNotion);
   $("#decrease-font-size").click(changeFontSize.bind(null, -1));
   $("#increase-font-size").click(changeFontSize.bind(null, +1));
   $("#decrease-window-size").click(changeWindowSize.bind(null, -1));
@@ -388,4 +390,11 @@ function showAnnouncement(ann) {
 function toggleDarkMode() {
   const darkMode = document.body.classList.toggle("dark-mode")
   updateSettings({darkMode})
+}
+
+// add save to notion button
+function onSaveToNotion() {
+  bgPageInvoke("saveToNotion")
+    .then(updateButtons)
+    .catch(handleError)
 }

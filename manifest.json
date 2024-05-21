@@ -33,7 +33,8 @@
     "scripting",
     "storage",
     "tts",
-    "ttsEngine"
+    "ttsEngine",
+    "tabs"
   ],
   "optional_permissions": [
     "webRequest",

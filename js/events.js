@@ -22,6 +22,7 @@ var handlers = {
   seek: seek,
   reportIssue: reportIssue,
   authWavenet: authWavenet,
+  saveToNotion: saveToNotion,
   managePiperVoices,
 }
 
@@ -59,25 +60,63 @@ async function installContentScripts() {
 }
 
 function installContextMenus() {
-  if (brapi.contextMenus)
-  brapi.contextMenus.create({
-    id: "read-selection",
-    title: brapi.i18n.getMessage("context_read_selection"),
-    contexts: ["selection"]
-  },
-  function() {
-    if (brapi.runtime.lastError) console.error(brapi.runtime.lastError)
-    else console.info("Installed context menus")
-  })
+  if (brapi.contextMenus) {
+    // Create the first context menu item for "Save highlight to Notion"
+    brapi.contextMenus.create({
+      id: "save-to-notion",
+      title: "Save Highlight to Notion",
+      contexts: ["selection"]
+    },
+    function() {
+      if (brapi.runtime.lastError) {
+        console.error(brapi.runtime.lastError);
+      } else {
+        console.info("Installed 'Save to Notion' context menu");
+      }
+    });
+
+    // Create the second context menu item for "Read out loud"
+    brapi.contextMenus.create({
+      id: "read-selection",
+      title: brapi.i18n.getMessage("context_read_selection"),
+      contexts: ["selection"]
+    },
+    function() {
+      if (brapi.runtime.lastError) {
+        console.error(brapi.runtime.lastError);
+      } else {
+        console.info("Installed 'Read selection' context menu");
+      }
+    });
+  }
 }
+
 
 
 /**
  * Context menu handlers
  */
+
+
+async function saveSelectedTextToNotion(url, selectionText) {
+  try {
+    const api_url = "http://localhost:8000/save_highlight/";
+    await fetch(api_url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ "url": url, "selection_text": selectionText }),
+    });
+  } catch (error) {
+    console.error("Failed to save selected text to DB:", error);
+  }
+}
+
+
 if (brapi.contextMenus)
 brapi.contextMenus.onClicked.addListener(function(info, tab) {
-  if (info.menuItemId == "read-selection")
+  if (info.menuItemId == "read-selection") {
     Promise.resolve()
       .then(function() {
         if (tab && tab.id != -1) return detectTabLanguage(tab.id)
@@ -87,6 +126,14 @@ brapi.contextMenus.onClicked.addListener(function(info, tab) {
         return playText(info.selectionText, {lang: lang})
       })
       .catch(handleHeadlessError)
+  } else if (info.menuItemId == "save-to-notion") {
+    getActiveTab().then(mtab => {
+      saveSelectedTextToNotion(mtab.url, info.selectionText);
+      console.log("Text saved to Notion for " + mtab.url + " : " + info.selectionText);
+      return mtab.url;
+    });
+    return "Text saved to Notion";
+  }
 })
 
 
@@ -269,6 +316,30 @@ function seek(n) {
   return sendToPlayer({method: "seek", args: [n]})
 }
 
+// Function to save the link to the DB
+async function saveLinkToDB(url) {
+  try {
+    console.log("Saving link to DB");
+    const api_url = "http://localhost:8000/save_to_db/";
+    await fetch(api_url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ url }),
+    });
+  } catch (error) {
+    console.error("Failed to save paper link to DB:", error);
+  }
+}
+
+function saveToNotion() {
+  getActiveTab().then(tab => {
+    saveLinkToDB(tab.url);
+    console.log("Link saved to Notion : " + tab.url);
+    return tab.url;
+  });
+}
 
 
 function handleHeadlessError(err) {
